@@ -165,7 +165,7 @@ else
         image_name = app.Image_Name_Label.Value;
         image_name = strsplit(image_name,',');
         image_name = image_name{1};
-        [~,~,~,app.Comp_Img] = Extract_Spec_Img(app,event,image_name);
+        [~,~,~,app.Comp_Img,~] = Extract_Spec_Img(app,event,image_name);
     else
         replace_map = find([app.Red_Only,app.Blue_Only]);
         if isempty(replace_map)
@@ -184,7 +184,7 @@ else
                 img_idx = strsplit(img_idx,',');
                 img_idx = img_idx{1};
             end
-            [~,~,~,comp_img] = Extract_Spec_Img(app,event,img_idx);
+            [~,~,~,comp_img,~] = Extract_Spec_Img(app,event,img_idx);
             app.Comp_Img{im_num} = comp_img;
         end
     end

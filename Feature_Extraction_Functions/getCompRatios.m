@@ -1,4 +1,4 @@
-function [ratios,s,compNum]=getCompRatios(compOb,inte,min_object_size)
+function [ratios,s,compNum]=getCompRatios(compOb,inte,min_object_size,scale_factor)
 %Compartment of interest is stored in channel 1, other compartments in 2
 %and 3
 L=bwlabel(bwpropfilt(compOb(:,:,1),'Area',[min_object_size+1,Inf]));
@@ -28,6 +28,6 @@ for i=1:compNum
     ratios(i,2)=CCOsum(1)/stats(i).Area;
     %Ratio of compartment 3 to compartment 1
     ratios(i,3)=CCOsum(2)/stats(i).Area;
-    %Area of compartment of interest
-    ratios(i,4)=stats(i).Area;
+    %Area of compartment of interest (multiplied by scalefactor)
+    ratios(i,4)=stats(i).Area * (1/scale_factor);
 end

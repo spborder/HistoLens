@@ -1,4 +1,4 @@
-function [ratios,s,compNum]=getNucRatios(compOb,nucpixradius,graynuclei)
+function [ratios,s,compNum]=getNucRatios(compOb,nucpixradius,graynuclei,scale_factor)
 L=bwlabel(compOb(:,:,1));
 ratios=zeros(max(L(:)),4);
 g=graycomatrix(graynuclei);
@@ -18,7 +18,7 @@ for i=1:compNum
     ratios(i,1)=sum(sum(CCO(:,:,2)))/sum(sum(compOutline));
     ratios(i,2)=sum(sum(CCO(:,:,3)))/sum(sum(compOutline));
     %Length of nuclear boundary
-    ratios(i,3)=sum(sum(compOutline));
+    ratios(i,3)=sum(sum(compOutline)) * (1/scale_factor);
     % Nuclear area
-    ratios(i,4)=sum(sum(comp));
+    ratios(i,4)=sum(sum(comp)) * (1/scale_factor);
 end

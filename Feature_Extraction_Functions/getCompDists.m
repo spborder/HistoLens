@@ -1,4 +1,4 @@
-function [compDists]=getCompDists(mask,gOutline,gCenter)
+function [compDists]=getCompDists(mask,gOutline,gCenter,scale_factor)
 L=logical(mask);
 
 %If compartment doesn't exist (e.g. no nuclei in a sclerotic glomerulus),
@@ -21,11 +21,11 @@ s=regionprops(L,'Centroid');
 compCenters=struct2table(s);
 compCenters=[compCenters.Centroid];
 %Pairwise distance between glomerular center and compartment centers
-GCeCoDistance=pdist2(gCenter,compCenters);
+GCeCoDistance=pdist2(gCenter,compCenters) * (1/scale_factor);
 %Pairwise distance between glomerular boundary and compartment centers
-GBCDistance=pdist2(compCenters,[rPerim,cPerim]);
+GBCDistance=pdist2(compCenters,[rPerim,cPerim]) * (1/scale_factor);
 %Pairwise distance between compartment centers and themselves
-GCoCoDistance=pdist2(compCenters,compCenters);
+GCoCoDistance=pdist2(compCenters,compCenters) * (1/scale_factor);
 
 %Sort the data so we can extract the SECOND smallest distance (the actual 
 %smallest distance is always 0 since we are taking the distance between a list of objects and itself)
