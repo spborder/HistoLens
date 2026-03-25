@@ -15,12 +15,12 @@ if ~app.Comparing
     end
     app.Current_Name = {image_name};
     
-    [raw_img,norm_img,~,~] = Extract_Spec_Img(app,event,image_name);
+    [raw_img,norm_img,~,~,scale_factor] = Extract_Spec_Img(app,event,image_name);
     
     axes(app.Img_Ax);
 
-    scaled_norm_img = Add_Scalebar(norm_img,app.Img_Ax,app.Baseline_MPP,app);
-    scaled_img = Add_Scalebar(raw_img,app.Img_Ax,app.Baseline_MPP,app);
+    scaled_norm_img = Add_Scalebar(norm_img,app.Img_Ax,scale_factor * app.Baseline_MPP,app);
+    scaled_img = Add_Scalebar(raw_img,app.Img_Ax,scale_factor * app.Baseline_MPP,app);
 
     app.Current_NormImg{1} = scaled_norm_img;
     app.Current_Img{1} = scaled_img;

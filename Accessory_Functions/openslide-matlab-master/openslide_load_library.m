@@ -38,11 +38,11 @@ end
 
 % Set name of library, platform dependent
 if ismac
-    libName = 'libopenslide.0.dylib';
+    libName = 'libopenslide.1.dylib';
 elseif ispc
-    libName = 'libopenslide-0.dll';
+    libName = 'libopenslide-1.dll';
 else
-    libName = 'libopenslide.so.0';
+    libName = 'libopenslide.so.1.0.0';
 end
 if isempty(which(libName))
     error('openslide:openslide_load_library',...

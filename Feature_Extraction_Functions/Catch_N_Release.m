@@ -37,16 +37,19 @@ for s = 1:length(slide_names)
     slide_idx_name = strcat('Slide_Idx_',num2str(s));
 
     if contains(slide,'.')
-        slide = strsplit(slide,'.');
+        slide_parts = strsplit(slide,'.');
 
-        wsi_ext = slide{end};
-        slide = strjoin(slide(1:end-1),'_');
+        wsi_ext = slide_parts{end};
+        slide_name = strrep(slide,strcat('.',wsi_ext),'');
     end
 
-    if ~ismember(wsi_ext,{'svs','tif','tiff','jpeg','jpg','png'})
-        slide_pointer = openslide_open(strcat(app.Slide_Path,filesep,slide_names{s}));
+    slide_filepath = strcat(slide_path,filesep,slide);
+
+
+    if ~ismember({wsi_ext},[imformats().ext])
+        slide_adapter = OpenSlideAdapter(slide_filepath);
     else
-        slide_pointer = [];
+        slide_adapter = [];
     end
 
     app.Slide_NormVals.(slide_idx_name).SlideName = slide;
@@ -59,8 +62,8 @@ for s = 1:length(slide_names)
     drawnow    
     
     if strcmp(app.Annotation_Format,'XML')
-        current_path = strcat(slide_path,filesep,slide,'.xml');
-        read_xml = xmlread(current_path);
+        ann_path = strcat(slide_path,filesep,strrep(slide,strcat('.',wsi_ext),'.xml'));
+        read_xml = xmlread(ann_path);
             
         annotations = read_xml.getElementsByTagName('Annotation');
     
@@ -92,21 +95,20 @@ for s = 1:length(slide_names)
         end
 
     else
-        current_path = strcat(slide_path,filesep,slide,'.json');
-        if ~isfile(current_path)
-            current_path = strrep(current_path,'.json','.geojson');
-            annotations = jsondecode(fileread(current_path));
+        ann_path = strcat(slide_path,filesep,strrep(slide,strcat('.',wsi_ext),'.json'));
+        if ~isfile(ann_path)
+            ann_path = strrep(ann_path,'.json','.geojson');
+            annotations = jsondecode(fileread(ann_path));
             annotations = annotations.features;
         else
-            annotations = jsondecode(fileread(current_path));
+            annotations = jsondecode(fileread(ann_path));
 
         end
     end
 
-    slide_filepath = strcat(slide_path,filesep,slide,'.',wsi_ext);
 
     % Unique structure identifier
-    slide_id = slide;
+    slide_id = strrep(slide,strcat('.',wsi_ext),'');
     structure_ID = slide_id;
     
     % Fix for multiple structure idxes for a single structure
@@ -188,36 +190,24 @@ for s = 1:length(slide_names)
             mask_coords = zeros(size(reg));
             mask_coords(:,1) = reg(:,1)-bbox_coords(1);
             mask_coords(:,2) = reg(:,2)-bbox_coords(3);
-        
-            if ismember(wsi_ext,{'svs','tif','tiff','jpeg','jpg','png'})
-                raw_img = imread(slide_filepath,'Index',1,'PixelRegion',{bbox_coords(3:4),bbox_coords(1:2)});
-            else
-                %display('Non SVS File format')
-                min_x = bbox_coords(1);
-                min_y = bbox_coords(3);
-                range_x = bbox_coords(2)-bbox_coords(1);
-                range_y = bbox_coords(4)-bbox_coords(3);
-    
-                raw_img = openslide_read_region(slide_pointer,min_x,min_y,range_x,range_y);
-            end
-    
-            mask = poly2mask(mask_coords(:,1),mask_coords(:,2),size(raw_img,1),size(raw_img,2));
+
+            [scaled_I, scaled_mask, scale_factor] = Check_Region_Request(slide_filepath,bbox_coords,mask_coords,slide_adapter);
     
             % Stain normalization
             if ismember('StainNormalization',fieldnames(seg_params))
-                img = normalizeStaining(raw_img,240,0.15,1,seg_params.StainNormalization.Means,...
+                img = normalizeStaining(scaled_I,240,0.15,1,seg_params.StainNormalization.Means,...
                     seg_params.StainNormalization.Maxs);
             else
-                img = raw_img;
+                img = scaled_I;
             end
             
             if ismember('Path',fieldnames(seg_params.(slide_idx_name).CompartmentSegmentation))
-                mask = strcat(slide,'_',num2str(r));
+                scaled_mask = strcat(slide,'_',num2str(r));
             end
-            comp_img = Comp_Seg(seg_params.(slide_idx_name).CompartmentSegmentation,img,mask);
+            comp_img = Comp_Seg(seg_params.(slide_idx_name).CompartmentSegmentation,img,scaled_mask);
     
             % Extracting feature row (corresponding to specific structure
-            feat_row_combined = Features_Extract_General(img,comp_img,feature_indices,mpp,mpp_scale);
+            feat_row_combined = Features_Extract_General(img,comp_img,feature_indices,mpp,mpp_scale,scale_factor);
            
             % Assigning a name to that structure
             new_ID = strcat(structure_ID,'_',num2str(r));
@@ -230,10 +220,10 @@ for s = 1:length(slide_names)
     
         cell2csv(feat_filename,feature_set);
     
-        if ~ismember(wsi_ext,{'svs','tif','tiff','jpeg','jpg','png'})
+        if ~ismember({wsi_ext},[imformats().ext])
             %display('Closing slide pointer')
-            openslide_close(slide_pointer)
-            slide_pointer = [];
+            slide_adapter.close()
+            slide_adapter = [];
         end
         
         clear reg_array

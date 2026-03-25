@@ -16,7 +16,7 @@ function Feature_Vis_Gen(app,event)
         image_name = app.Image_Name_Label.Value;
         image_name = strsplit(image_name,',');
         image_name = image_name{1};
-        [raw_I,norm_I,mask,composite] = Extract_Spec_Img(app,event,image_name);
+        [raw_I,norm_I,mask,composite,scale_factor] = Extract_Spec_Img(app,event,image_name);
 
         app.Comp_Img{1} = composite;
 
@@ -50,12 +50,12 @@ function Feature_Vis_Gen(app,event)
                 img_idx = strsplit(img_idx,',');
                 img_idx = img_idx{1};
                 
-                [raw_I,norm_I,mask,composite] = Extract_Spec_Img(app,event,img_idx);
+                [raw_I,norm_I,mask,composite,scale_factor] = Extract_Spec_Img(app,event,img_idx);
             else
                 comp_img_idx = app.Blue_Comp_Image.Value;
                 comp_img_idx = strsplit(comp_img_idx,',');
                 comp_img_idx = comp_img_idx{1};
-                [raw_I,norm_I,mask,composite] = Extract_Spec_Img(app,event,comp_img_idx);
+                [raw_I,norm_I,mask,composite,scale_factor] = Extract_Spec_Img(app,event,comp_img_idx);
             end
 
             app.Comp_Img{im_num} = composite;

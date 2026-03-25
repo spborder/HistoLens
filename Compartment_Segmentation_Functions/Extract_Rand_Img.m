@@ -47,31 +47,13 @@ else
 end
 
 % 3:4 = rows, 1:2 = columns
-
-if strcmp(wsi_ext,'svs')
-    new_img = imread(strcat(app.Slide_Path,filesep,app.Slide_Names{slide_idx}),'Index',1,'PixelRegion',{bbox_coords(3:4),bbox_coords(1:2)});
-else
-    % Reading image with openslide_read_region
-    min_x = bbox_coords(1);
-    min_y = bbox_coords(3);
-    range_x = bbox_coords(2)-bbox_coords(1);
-    range_y = bbox_coords(4)-bbox_coords(3);
-
-    slide_pointer = openslide_open(strcat(slide_path,'.',wsi_ext));
-
-    new_img = openslide_read_region(slide_pointer,min_x,min_y,range_x,range_y);
-    new_img = new_img(2:end,:,:);
-
-    openslide_close(slide_pointer)
-end
-
-
-mask = poly2mask(mask_coords(:,1),mask_coords(:,2),size(new_img,1),size(new_img,2));
+slide_path = strcat(app.Slide_Path,filesep,app.Slide_Names{slide_idx});
+[scaled_I,scaled_mask,scale_factor] = Check_Region_Request(slide_path,bbox_coords,mask_coords);
 
 app.Current_Name = app.Slide_Names{slide_idx};
 
 if ~isempty(app.StainNorm_Params) && ~any(app.StainNorm_Params.Means==0,'all') && ~any(app.StainNorm_Params.Maxs==0,'all')
-    norm_img = normalizeStaining(new_img,240,0.15,1,app.StainNorm_Params.Means,...
+    norm_img = normalizeStaining(scaled_I,240,0.15,1,app.StainNorm_Params.Means,...
         app.StainNorm_Params.Maxs);
 
     app.Norm_Img = norm_img;
@@ -79,7 +61,7 @@ else
     app.Norm_Img = [];
 end
         
-app.Current_Img = new_img;
-app.Current_Mask = mask;
+app.Current_Img = scaled_I;
+app.Current_Mask = scaled_mask;
 % end
 

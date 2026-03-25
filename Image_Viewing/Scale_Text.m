@@ -14,6 +14,18 @@ scale_width = 5;
 % Defining height and width for lower right hand corner
 [rows, cols, ~] = size(img);
 
+micron_length = 50;
+while scale_length > cols - 20
+    scale_length = floor(scale_length / 2);
+    micron_length = micron_length * 2;
+end
+
+if ~strcmp(text_text,'50 px')
+    text_text = strcat(string(micron_length),'\mu','m');
+else
+    text_text = strcat(string(micron_length), 'px');
+end
+
 % Text location
 text_loc = [rows-25-scale_width,cols-15-(scale_length/2)];
 

@@ -1,6 +1,6 @@
 % --- Function for Generalized Feature Extraction based on array of feature
 % indices
-function feat_row = Features_Extract_General(img,comp_img,feat_idxes,mpp,mpp_scale)
+function feat_row = Features_Extract_General(img,comp_img,feat_idxes,mpp,mpp_scale,scale_factor)
 
 % Resizing images according to mpp_scale
 img = imresize(img,mpp_scale,'bilinear');
@@ -77,7 +77,7 @@ end
 % within the array 
 
 if any(ismember(feat_idxes,(1:10)))
-    [ratiosL, s2, lum_num] = getCompRatios(compLum,grayLum,min_object_size);
+    [ratiosL, s2, lum_num] = getCompRatios(compLum,grayLum,min_object_size,scale_factor);
     
     feat_subgroup = zeros(1,10);
     feat_subgroup(1,1:3) = mean(ratiosL(:,1:3));
@@ -95,7 +95,7 @@ if any(ismember(feat_idxes,(1:10)))
 end
 
 if any(ismember(feat_idxes,(11:20)))
-    [ratiosM,s1,PAS_num] = getCompRatios(compPAS,grayPAS,min_object_size);
+    [ratiosM,s1,PAS_num] = getCompRatios(compPAS,grayPAS,min_object_size,scale_factor);
     
     feat_subgroup = zeros(1,10);
     feat_subgroup(1,1:3) = mean(ratiosM(:,1:3));
@@ -113,7 +113,7 @@ if any(ismember(feat_idxes,(11:20)))
 end
 
 if any(ismember(feat_idxes,(21:30)))
-    [ratiosN,s3,nuc_num] = getNucRatios(compNuc,nucpixradius,grayNuc);
+    [ratiosN,s3,nuc_num] = getNucRatios(compNuc,nucpixradius,grayNuc,scale_factor);
     
     feat_subgroup = zeros(1,10);
     feat_subgroup(1,1:3) = mean(ratiosN(:,1:3));
@@ -131,35 +131,35 @@ if any(ismember(feat_idxes,(21:30)))
 end
 
 if any(ismember(feat_idxes,(31:37)))
-   distsL = getCompDists(lum_mask,gOutline,[rMean,cMean]);
+   distsL = getCompDists(lum_mask,gOutline,[rMean,cMean],scale_factor);
    
    [overlap,int_idx,~] = intersect(feat_idxes, (31:37));
    feat_row(1,int_idx) = distsL(overlap-30);
 end
 
 if any(ismember(feat_idxes,(38:44)))
-    distsM = getCompDists(pas_mask,gOutline,[rMean,cMean]);
+    distsM = getCompDists(pas_mask,gOutline,[rMean,cMean],scale_factor);
     
     [overlap,int_idx,~] = intersect(feat_idxes,(38:44));
     feat_row(1,int_idx) = distsM(overlap-37);
 end
 
 if any(ismember(feat_idxes,(45:51)))
-    distsN = getCompDists(nuc_mask,gOutline,[rMean,cMean]);
+    distsN = getCompDists(nuc_mask,gOutline,[rMean,cMean],scale_factor);
     
     [overlap,int_idx,~] = intersect(feat_idxes,(45:51));
     feat_row(1,int_idx) = distsN(overlap-44);
 end
 
 if any(ismember(feat_idxes,52))
-    glom_area = sum(boundary_mask(:));
+    glom_area = sum(boundary_mask(:)) * (1/scale_factor);
     
     feat_row(1,find(feat_idxes==52)) = glom_area;
 end
 
 if any(ismember(feat_idxes,(56:110)))
     PAS = bwareaopen(pas_mask,min_object_size);
-    mdt = bwdist(~PAS);
+    mdt = bwdist(~PAS) * (1/scale_factor);
     m_ext1 = mdt>0&mdt<=10;
     m_ext2 = mdt>10&mdt<=20;
     m_ext3 = mdt>20&mdt<1000;
@@ -199,7 +199,7 @@ if any(ismember(feat_idxes,(56:110)))
 end
 
 if any(ismember(feat_idxes,(111:170)))
-    ldt = bwdist(~lum_mask);
+    ldt = bwdist(~lum_mask) * (1/scale_factor);
     edges = [1:1:60,2000];
     feat_subgroup = histcounts(ldt(ldt(:)>0),edges);
     
@@ -208,7 +208,7 @@ if any(ismember(feat_idxes,(111:170)))
 end
 
 if any(ismember(feat_idxes,(171:190)))
-    ndt = bwdist(~nuc_mask);
+    ndt = bwdist(~nuc_mask) * (1/scale_factor);
     edges = [1:1:20,2000];
     feat_subgroup = histcounts(ndt(ndt(:)>0),edges);
     
@@ -218,12 +218,13 @@ end
 
 if any(ismember(feat_idxes,(191:214)))
     edges = [2:25:600,20000];
-    feat_subgroup = histcounts(gdist(gdist(:)>0),edges);
+    feat_subgroup = histcounts(gdist(gdist(:)>0) * (1/scale_factor),edges);
     
     [overlap,int_idx,~] = intersect(feat_idxes,(191:214));
     feat_row(1,int_idx) = feat_subgroup(overlap-190);
 end
 
+% Mean and standard deviation of RGB color channels (PAS)
 if any(ismember(feat_idxes,(215:220)))
     [d1,d2,z] = size(img);
     
@@ -243,6 +244,7 @@ if any(ismember(feat_idxes,(215:220)))
     feat_row(1,int_idx) = feat_subgroup(overlap-214);
 end
 
+% Mean and standard deviation of color channels (LUM)
 if any(ismember(feat_idxes,(221:226)))
     [d1,d2,z] = size(img);
     
@@ -262,6 +264,7 @@ if any(ismember(feat_idxes,(221:226)))
     feat_row(1,int_idx) = feat_subgroup(overlap-220);
 end
 
+% Mean and standard deviation of color channels (NUC)
 if any(ismember(feat_idxes,(227:232)))
     [d1,d2,z] = size(img);
     
@@ -281,10 +284,11 @@ if any(ismember(feat_idxes,(227:232)))
     feat_row(1,int_idx) = feat_subgroup(overlap-226);
 end
 
+% Radial nuc pixel counts
 if any(ismember(feat_idxes,(233:243)))
     [y,x] = find(nuc_mask);
     [theta,rho] = cart2pol(x-rMean,y-cMean);
-    feat_subgroup = histcounts(rho,[0,100:1000,1300]);
+    feat_subgroup = histcounts(rho * (1/scale_factor),[0,100:1000,1300]);
     
     [overlap,int_idx,~] = intersect(feat_idxes,(233:243));
     feat_row(1,int_idx) = feat_subgroup(overlap-232);
@@ -297,24 +301,27 @@ if any(ismember(feat_idxes,(233:243)))
     end
 end
 
+% Radial lum pixel counts
 if any(ismember(feat_idxes,(244:254)))
     [y,x] = find(lum_mask);
     [~,rho] = cart2pol(x-rMean,y-cMean);
-    feat_subgroup = histcounts(rho,[0:100:1000:1300]);
+    feat_subgroup = histcounts(rho * (1/scale_factor),[0:100:1000:1300]);
     
     [overlap,int_idx,~] = intersect(feat_idxes,(244:254));
     feat_row(1,int_idx) = feat_subgroup(overlap-243);
 end
 
+% Radial pas pixel counts
 if any(ismember(feat_idxes,(255:265)))
     [y,x] = find(pas_mask);
     [~,rho] = cart2pol(x-rMean,y-cMean);
-    feat_subgroup = histcounts(rho,[0:100:1000,1300]);
+    feat_subgroup = histcounts(rho * (1/scale_factor),[0:100:1000,1300]);
     
     [overlap,int_idx,~] = intersect(feat_idxes,(255:265));
     feat_row(1,int_idx) = feat_subgroup(overlap-254);
 end
 
+% Distance quantiles nuc pixel counts
 if any(ismember(feat_idxes,(286:295)))
     nuc_dist_bound = double(gdist2.*double(nuc_mask));
     feat_subgroup = quantile(nonzeros(nuc_dist_bound(:)),[.1:.1:1]);
@@ -323,6 +330,7 @@ if any(ismember(feat_idxes,(286:295)))
     feat_row(1,int_idx) = feat_subgroup(overlap-285);
 end
 
+% Distance quantiles pas pixel counts
 if any(ismember(feat_idxes,(296:305)))
     PAS_dist_bound = double(gdist2.*double(pas_mask));
     feat_subgroup = quantile(nonzeros(PAS_dist_bound(:)),[.1:.1:1]);
@@ -331,6 +339,7 @@ if any(ismember(feat_idxes,(296:305)))
     feat_row(1,int_idx) = feat_subgroup(overlap-295);
 end
 
+% Distance quantiles lum pixel counts
 if any(ismember(feat_idxes,(306:315)))
     lum_dist_bound = double(gdist2.*double(lum_mask));
     feat_subgroup = quantile(nonzeros(lum_dist_bound(:)),[.1:.1:1]);
@@ -338,11 +347,12 @@ if any(ismember(feat_idxes,(306:315)))
     [overlap,int_idx,~] = intersect(feat_idxes,(306:315));
     feat_row(1,int_idx) = feat_subgroup(overlap-305);
 end
-    
+  
+% MST and Voronoi nuclear features
 if any(ismember(feat_idxes,(316:329)))
     nuc_coords = regionprops(nuc_mask,'centroid');
     nuc_coords = struct2cell(nuc_coords);
-    nuc_coords = cell2mat(nuc_coords');
+    nuc_coords = cell2mat(nuc_coords') * (1/scale_factor);
    
     if length(nuc_coords)>2
 
@@ -450,9 +460,9 @@ if any(ismember(feat_idxes,(330:334)))
     % Solidity, Eccentricity]
     mask_feats = regionprops(boundary_mask,'Area','ConvexArea','Perimeter','Solidity','Eccentricity');
     
-    area = mask_feats.Area*(mpp^2);
-    convex_area = mask_feats.ConvexArea*(mpp^2);
-    perimeter = mask_feats.Perimeter*(mpp);
+    area = mask_feats.Area*(mpp^2) * (1/scale_factor);
+    convex_area = mask_feats.ConvexArea*(mpp^2) * (1/scale_factor);
+    perimeter = mask_feats.Perimeter*(mpp) * (1/scale_factor);
     solidity = mask_feats.Solidity;
     eccentricity = mask_feats.Eccentricity;
 
@@ -496,8 +506,8 @@ if any(ismember(feat_idxes,(335:358)))
     if any(ismember(feat_idxes,[338,339]))
         
         feat_subgroup = zeros(1,2);
-        feat_subgroup(1,1) = mean(mean(dt));
-        feat_subgroup(1,2) = max(max(dt));
+        feat_subgroup(1,1) = mean(mean(dt)) * (1/scale_factor);
+        feat_subgroup(1,2) = max(max(dt)) * (1/scale_factor);
         
         [overlap,int_idx,~] = intersect(feat_idxes,[338,339]);
         feat_row(1,int_idx) = feat_subgroup(overlap-337);
@@ -535,7 +545,7 @@ if any(ismember(feat_idxes,(335:358)))
     if any(ismember(feat_idxes,(350:358)))
         
         stats = regionprops(tbm,'Solidity');
-        diststbm = getCompDists(tbm,gOutline,[rMean,cMean]);
+        diststbm = getCompDists(tbm,gOutline,[rMean,cMean],scale_factor);
         
         feat_subgroup = zeros(1,9);
         feat_subgroup(1,1) = sum(sum(tbm));
@@ -587,8 +597,8 @@ if any(ismember(feat_idxes,(359:382)))
         dt = bwdist(~inmem);
         
         feat_subgroup = zeros(1,2);
-        feat_subgroup(1,1) = mean(mean(dt));
-        feat_subgroup(1,2) = max(max(dt));
+        feat_subgroup(1,1) = mean(mean(dt)) * (1/scale_factor);
+        feat_subgroup(1,2) = max(max(dt)) * (1/scale_factor);
         
         [overlap,int_idx,~] = intersect(feat_idxes,[362,363]);
         feat_row(1,int_idx) = feat_subgroup(overlap-361);
@@ -642,7 +652,7 @@ if any(ismember(feat_idxes,(359:382)))
     
     if any(ismember(feat_idxes,(376:382)))
         
-        distsinmem = getCompDists(inmem,gOutline,[rMean,cMean]);
+        distsinmem = getCompDists(inmem,gOutline,[rMean,cMean],scale_factor);
         
         feat_subgroup = mean(distsinmem);
         [overlap,int_idx,~] = intersect(feat_idxes,(376:382));
@@ -656,8 +666,14 @@ if any(ismember(feat_idxes,(383:389)))
     tubule_morphology = regionprops(boundary_mask,'Area','Eccentricity',...
         'MajorAxisLength','MinorAxisLength','Perimeter','Solidity');
     
+    tubule_morphology.Area = tubule_morphology.Area * (1/scale_factor);
+    tubule_morphology.MajorAxisLength = tubule_morphology.MajorAxisLength * (1/scale_factor);
+    tubule_morphology.MinorAxisLength = tubule_morphology.MinorAxisLength * (1/scale_factor);
+    tubule_morphology.Perimeter = tubule_morphology.Perimeter * (1/scale_factor);
+
+    
     feat_subgroup = zeros(1,7);
-    feat_subgroup(1,1) = (4*pi*tubule_morphology.Area)/(tubule_morphology.Perimeter.^2);
+    feat_subgroup(1,1) = (4*pi*tubule_morphology.Area)/((tubule_morphology.Perimeter).^2);
     feat_subgroup(1,2) = sqrt(4*tubule_morphology.Area*pi);
     feat_subgroup(1,3) = tubule_morphology.MajorAxisLength;
     feat_subgroup(1,4) = tubule_morphology.MinorAxisLength;
@@ -672,7 +688,7 @@ end
 
 if any(ismember(feat_idxes,(390:394)))
     
-    lum_dist_bound = double(gdist2.*double(lum_mask));
+    lum_dist_bound = double(gdist2.*double(lum_mask)) * (1/scale_factor);
     
     feat_subgroup = zeros(1,5);
     feat_subgroup(1,1) = min(lum_dist_bound(lum_dist_bound(:)>0));
@@ -687,7 +703,7 @@ end
 
 if any(ismember(feat_idxes,(395:399)))
     
-    PAS_dist_bound = double(gdist2.*double(pas_mask));
+    PAS_dist_bound = double(gdist2.*double(pas_mask)) * (1/scale_factor);
     
     feat_subgroup = zeros(1,5);
     feat_subgroup(1,1) = min(PAS_dist_bound(PAS_dist_bound(:)>0));
@@ -701,32 +717,32 @@ if any(ismember(feat_idxes,(395:399)))
 end
 
 if any(ismember(feat_idxes,400))
-    mdt = bwdist(~pas_mask);
+    mdt = bwdist(~pas_mask) * (1/scale_factor);
     
     feat_row(1,find(feat_idxes==400)) = max(mdt(:));
 end
 
 if any(ismember(feat_idxes,401))
-    ldt = bwdist(~lum_mask);
+    ldt = bwdist(~lum_mask) * (1/scale_factor);
     
     feat_row(1,find(feat_idxes==401)) = max(ldt(:));
 end
 
 if any(ismember(feat_idxes,402))
-    ndt = bwdist(~nuc_mask);
+    ndt = bwdist(~nuc_mask) * (1/scale_factor);
     
     feat_row(1,find(feat_idxes==402)) = max(ndt(:));
 end
 
 if any(ismember(feat_idxes,403))
     
-    feat_row(1,find(feat_idxes==403)) = max(max(gdist));
+    feat_row(1,find(feat_idxes==403)) = max(max(gdist)) * (1/scale_factor);
 end
 
 if any(ismember(feat_idxes,(404:418)))
     
     nuc_areas = regionprops(nuc_mask,'SubArrayIdx');
-    nuc_dist = gdist;
+    nuc_dist = gdist * (1/scale_factor);
     nuc_dist(~nuc_mask) = 0;
     
     uobs = bwlabel(nuc_mask);
@@ -783,11 +799,11 @@ if any(ismember(feat_idxes,(419:433)))
     inmem(~boundary_w_mem) = 0;
     inmem = bwareaopen(inmem,50);
     
-    inmemdist = gdist;
+    inmemdist = gdist * (1/scale_factor);
     inmemdist(~inmem) = 0;
     inmem_areas = regionprops(inmem,'SubarrayIdx');
         
-    inmemdist = gdist;
+    inmemdist = gdist * (1/scale_factor);
     inmemdist(~inmem) = 0;
     
     uobs = bwlabel(inmem);
@@ -796,7 +812,7 @@ if any(ismember(feat_idxes,(419:433)))
         loc = inmem_areas(i).SubArrayIdx;
         smallmask = uobs(loc{:});
         
-        dtvals = nucdist(loc{:}).*double(smallmask==i);
+        dtvals = nucdist(loc{:}).*double(smallmask==i) * (1/scale_factor);
         if sum(dtvals(:))==0
             ovals = zeros(1,3);
         else
@@ -844,11 +860,11 @@ if any(ismember(feat_idxes,(434:448)))
     inmem(~boundary_w_mem) = 0;
     inmem = bwareaopen(inmem,50);
     
-    inmemdist = gdist;
+    inmemdist = gdist * (1/scale_factor);
     inmemdist(~inmem) = 0;
     inmem_areas = regionprops(inmem,'SubarrayIdx');
         
-    inmemdist = gdist;
+    inmemdist = gdist * (1/scale_factor);
     inmemdist(~inmem) = 0;
     
     uobs = bwlabel(inmem);
@@ -857,7 +873,7 @@ if any(ismember(feat_idxes,(434:448)))
         loc = inmem_areas(i).SubArrayIdx;
         smallmask = uobs(loc{:});
         
-        dtvals = nucdist(loc{:}).*double(smallmask==i);
+        dtvals = nucdist(loc{:}).*double(smallmask==i) * (1/scale_factor);
         if sum(dtvals(:))==0
             ovals = zeros(1,3);
         else
@@ -894,7 +910,7 @@ end
 if any(find(feat_idxes>448))
     
     custom_feat_idxes = feat_idxes(find(feat_idxes>448));
-    custom_features = Extract_Custom_Features(img,comp_img,custom_feat_idxes,mpp);
+    custom_features = Extract_Custom_Features(img,comp_img,custom_feat_idxes,mpp,scale_factor);
     
     feat_row(1,find(feat_idxes>448)) = custom_features;
     
